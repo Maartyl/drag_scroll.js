@@ -5,7 +5,7 @@
 
 # keeps track of last MAX positions and derivations, to compute overscroll
 class Buf
-  MAX = 100 #max_length: idx 100 == 0
+  MAX = 50 #max_length: idx MAX == 0
   idx: 0
   len: 0
   arr: [{m:0, d:0, l:1}] #see @add for details
@@ -45,7 +45,7 @@ class Buf
       idx = if @len < MAX then i else #never looped: arr is not 'full'
         (@idx + 1 + i) % @len #@idx+1: after last -> [0]
       e = @arr[idx]
-      weight = i/@len * (e.l/100) # CUSTOMIZE this to interpret previous moves differently
+      weight = i/@len * (e.l) # CUSTOMIZE this to interpret previous moves differently
       acc += weight * e.d
       acc_w += weight
     acc / acc_w #returns average derivation: rate of change: px/ms
@@ -58,17 +58,59 @@ class Buf
 # self: something that implemnts this ifce
 # all takes mouse_event as argument
 
+
+#finds parent-nearest scrollable html-element and provides it as @elem
+class Scroller
+  #@elem
+  #API: @scroll, @scrollable
+
+#tests if an element makes sense to be used for scrolling
+  elligible = (e) ->
+    (if e.currentStyle then e.currentStyle
+    else getComputedStyle(e, null)).position isnt 'static' # static breaks scrolling sometimes
+
+  constructor: (@start) ->
+    cur_elem = @start
+    while cur_elem
+      if Math.abs(@compare cur_elem) > 5 and elligible cur_elem
+#         console.log 'found:', cur_elem
+        @elem = cur_elem
+        return
+      else
+        cur_elem = cur_elem.parentElement
+    # none found: nothing scrollable: just override with a mock
+#     @scroll = (dist) -> 0
+#     @scrollable = false
+    @scroll = @fallback
+    return
+  scrollable:true
+
+class ScrollerX extends Scroller
+  compare: (e) -> e.scrollLeftMax ##e.scrollWidth - e.clientWidth #0 if same
+  scroll: (dist) => @elem.scrollLeft+=dist #auto manages bounds
+  fallback: (dist) -> window.scrollBy(dist, 0)
+class ScrollerY extends Scroller
+  compare: (e) -> e.scrollTopMax ##e.scrollHeight - e.clientHeight #0 if same
+  scroll: (dist) => @elem.scrollTop+=dist
+  fallback: (dist) -> window.scrollBy(0, dist)
+
 # exists for a single drag
 class Dragger
-  constructor: (pos) ->
-    @bx = new Buf pos.x
-    @by = new Buf pos.y
+  constructor: (ev) ->
+    @init_pos = x:ev.clientX, y:ev.clientY
+    @init_target = ev.target
+    @bx = new Buf @init_pos.x
+    @by = new Buf @init_pos.y
+    @sx = new ScrollerX @init_target
+    @sy = new ScrollerY @init_target
 
   # mian MOUSEMOVE event handler
   mover: (ev) =>
-    dx = @bx.add ev.clientX # returns difference from last
-    dy = @by.add ev.clientY
-    window.scrollBy dx, dy
+    @sx.scroll @bx.add ev.clientX if @sx.scrollable
+    @sy.scroll @by.add ev.clientY if @sy.scrollable
+
+  # distance from init_pos
+  init_dist: (x, y) => Math.sqrt(Math.pow(@init_pos.x - x, 2) + Math.pow(@init_pos.y - y, 2))
 
   next: (ev) =>
     @mover ev
@@ -76,10 +118,12 @@ class Dragger
   #just continue (could also start anew... (happens when proper mouseup wasn't registered (outside window)))
   start: (ev) => @next ev
   stop: (ev) =>
+#     if init_dist(ev.clientX, ev.clientY) > 100 then ev.stopPropagation() #don't follow links if I moved at least a bit
+#     ... breaks ... kinda everything XD
     @mover ev
-    new Overscroll @bx.avg(), @by.avg()
+    new Overscroll @bx.avg(), @by.avg(), @sx, @sy
 
-drag = (ev) -> new Dragger x:ev.clientX, y:ev.clientY
+drag = (ev) -> new Dragger ev
 
 class Momentum
   DRAG = 0.998 #speed at which to slow down (0.2% per ms)
@@ -105,9 +149,11 @@ class Momentum
 
 # exists after dragger ends
 class Overscroll
-  constructor: (@speedX, @speedY)->
-    @mx = new Momentum @speedX, (d) -> window.scrollBy d, 0
-    @my = new Momentum @speedY, (d) -> window.scrollBy 0, d
+  constructor: (@speedX, @speedY, scrollerX, scrollerY)->
+    @mx = new Momentum @speedX, scrollerX.scroll if scrollerX and scrollerX.scrollable
+    @my = new Momentum @speedY, scrollerY.scroll if scrollerY and scrollerY.scrollable
+    @mx = @mx or stop:()->0 #if not scrollable: stub, so it can be 'stopped'
+    @my = @my or stop:()->0
 
   next: (ev) =>
     do @mx.stop
@@ -144,7 +190,10 @@ class Listener
     @serv = @serv.stop ev
 
 l = new Listener()
-l.listen()
 
-unless window.Maa_scroll_drag
-  window.Maa_scroll_drag = l
+maa = 'Maa_scroll_drag'
+if window[maa]
+  window[maa].kill() #kill previous running (for restarting)
+window[maa] = l
+
+l.listen()
