@@ -7,7 +7,8 @@
 ## LIB
 ###*
 # http://stackoverflow.com/a/2381862/2692364
-# Fire an event handler to the specified node. Event handlers can detect that the event was fired programatically
+# Fire an event handler to the specified node.
+# Event handlers can detect that the event was fired programatically
 # by testing for a 'synthetic=true' property on the event object
 # @param {HTMLNode} node The node to fire the event handler on.
 # @param {String} eventName The name of the event without the "on" (e.g., "focus")
@@ -31,7 +32,8 @@ fireEvent = (node, eventName, evo) ->
     # the event firing is going to fail.
     ev = evo or do(doc, eventName)->
       eventClass = switch eventName
-        # Dispatching of 'click' appears to not work correctly in Safari. Use 'mousedown' or 'mouseup' instead.
+        # Dispatching of 'click' appears to not work correctly in Safari.
+        # Use 'mousedown' or 'mouseup' instead.
         when 'click', 'mousedown', 'mouseup'
           'MouseEvents'
         when 'focus', 'change', 'blur', 'select'
@@ -197,10 +199,12 @@ class Dragger
   next: (ev) =>
     @mover ev
     @
-  #just continue (could also start anew... (happens when proper mouseup wasn't registered (outside window)))
+  #just continue (could also start anew...
+  #(happens when proper mouseup wasn't registered (outside window)))
   start: (ev) => @next ev
   stop: (ev) =>
-#     if init_dist(ev.clientX, ev.clientY) > 100 then ev.stopPropagation() #don't follow links if I moved at least a bit
+#     #don't follow links if I moved at least a bit
+#     if init_dist(ev.clientX, ev.clientY) > 100 then ev.stopPropagation()
 #     ... breaks ... kinda everything XD
     @mover ev
     new Overscroll @bx.avg(), @by.avg(), @sx, @sy
@@ -227,7 +231,8 @@ class Momentum
     if Math.abs(@speed) < LIMIT
       do @stop
     else
-      @scroll @speed * tdiff #this is slightly smaller, as it doesn't include every step, but... it's fine
+      #this is slightly smaller, as it doesn't include every step, but... it's fine
+      @scroll @speed * tdiff
 
 # exists after dragger ends
 class Overscroll
