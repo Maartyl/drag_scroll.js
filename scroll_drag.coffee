@@ -89,6 +89,9 @@ class Buf
     diff = last.p - pos #inverted, otherwise scrolls ... upside down
     len = time - last.t
 
+    if len is 0 # avoid division by 0
+      return diff
+
     @arr[do @inc] =
       m: diff # relative movement from last
       t: time # current time
@@ -137,13 +140,14 @@ class Scroller
 
 #tests if an element makes sense to be used for scrolling
   elligible = (e) ->
-    (if e.currentStyle then e.currentStyle
-    else getComputedStyle(e, null)).position isnt 'static' # static breaks scrolling sometimes
+#     (if e.currentStyle then e.currentStyle # static breaks scrolling sometimes
+#     else getComputedStyle(e, null)).position isnt 'static' and
+    e.parentElement #no parent == html -> use global scroll
 
   constructor: (@start) ->
     cur_elem = @start
     while cur_elem
-      if Math.abs(@compare cur_elem) > 18 #and elligible cur_elem
+      if Math.abs(@compare cur_elem) > 18 and elligible cur_elem
         console.log "#{@desc}.found:", cur_elem if DBG_SHOW_FOUND
         @elem = cur_elem
         return
@@ -158,12 +162,14 @@ class Scroller
   scrollable:true
 
 class ScrollerX extends Scroller
-  compare: (e) -> e.scrollLeftMax ##e.scrollWidth - e.clientWidth #0 if same
+#   compare: (e) -> e.scrollLeftMax ##e.scrollWidth - e.clientWidth #0 if same
+  compare: (e) -> e.scrollWidth - e.clientWidth #0 if same
   scroll: (dist) => @elem.scrollLeft+=dist #auto manages bounds
   fallback: (dist) -> window.scrollBy(dist, 0)
   desc: 'X'
 class ScrollerY extends Scroller
-  compare: (e) -> e.scrollTopMax ##e.scrollHeight - e.clientHeight #0 if same
+#   compare: (e) -> e.scrollTopMax ##e.scrollHeight - e.clientHeight #0 if same
+  compare: (e) -> e.scrollHeight - e.clientHeight #0 if same
   scroll: (dist) => @elem.scrollTop+=dist
   fallback: (dist) -> window.scrollBy(0, dist)
   desc:'Y'

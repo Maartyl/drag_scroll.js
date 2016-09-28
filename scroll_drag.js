@@ -96,6 +96,9 @@
       last = this.arr[this.idx];
       diff = last.p - pos;
       len = time - last.t;
+      if (len === 0) {
+        return diff;
+      }
       this.arr[this.inc()] = {
         m: diff,
         t: time,
@@ -146,7 +149,7 @@
     var elligible;
 
     elligible = function(e) {
-      return (e.currentStyle ? e.currentStyle : getComputedStyle(e, null)).position !== 'static';
+      return e.parentElement;
     };
 
     function Scroller(start) {
@@ -154,7 +157,7 @@
       this.start = start;
       cur_elem = this.start;
       while (cur_elem) {
-        if (Math.abs(this.compare(cur_elem)) > 18) {
+        if (Math.abs(this.compare(cur_elem)) > 18 && elligible(cur_elem)) {
           if (DBG_SHOW_FOUND) {
             console.log(this.desc + ".found:", cur_elem);
           }
@@ -186,7 +189,7 @@
     }
 
     ScrollerX.prototype.compare = function(e) {
-      return e.scrollLeftMax;
+      return e.scrollWidth - e.clientWidth;
     };
 
     ScrollerX.prototype.scroll = function(dist) {
@@ -212,7 +215,7 @@
     }
 
     ScrollerY.prototype.compare = function(e) {
-      return e.scrollTopMax;
+      return e.scrollHeight - e.clientHeight;
     };
 
     ScrollerY.prototype.scroll = function(dist) {
