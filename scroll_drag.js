@@ -2,7 +2,8 @@
 
 /**
  * http://stackoverflow.com/a/2381862/2692364
- * Fire an event handler to the specified node. Event handlers can detect that the event was fired programatically
+ * Fire an event handler to the specified node.
+ * Event handlers can detect that the event was fired programatically
  * by testing for a 'synthetic=true' property on the event object
  * @param {HTMLNode} node The node to fire the event handler on.
  * @param {String} eventName The name of the event without the "on" (e.g., "focus")
@@ -146,18 +147,19 @@
   })();
 
   Scroller = (function() {
-    var elligible;
-
-    elligible = function(e) {
-      return e.parentElement;
+    Scroller.prototype.elligible = function(e) {
+      var style;
+      style = e.currentStyle ? e.currentStyle : getComputedStyle(e, null);
+      return style[this.overflow_css] === 'auto' || style[this.overflow_css] === 'scroll' && e.parentElement;
     };
 
     function Scroller(start) {
       var cur_elem;
       this.start = start;
+      this.elligible = bind(this.elligible, this);
       cur_elem = this.start;
       while (cur_elem) {
-        if (Math.abs(this.compare(cur_elem)) > 18 && elligible(cur_elem)) {
+        if (Math.abs(this.compare(cur_elem)) > 18 && this.elligible(cur_elem)) {
           if (DBG_SHOW_FOUND) {
             console.log(this.desc + ".found:", cur_elem);
           }
@@ -200,6 +202,8 @@
       return window.scrollBy(dist, 0);
     };
 
+    ScrollerX.prototype.overflow_css = 'overflow-x';
+
     ScrollerX.prototype.desc = 'X';
 
     return ScrollerX;
@@ -225,6 +229,8 @@
     ScrollerY.prototype.fallback = function(dist) {
       return window.scrollBy(0, dist);
     };
+
+    ScrollerY.prototype.overflow_css = 'overflow-y';
 
     ScrollerY.prototype.desc = 'Y';
 

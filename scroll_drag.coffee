@@ -141,15 +141,19 @@ class Scroller
   #API: @scroll, @scrollable
 
 #tests if an element makes sense to be used for scrolling
-  elligible = (e) ->
-#     (if e.currentStyle then e.currentStyle # static breaks scrolling sometimes
-#     else getComputedStyle(e, null)).position isnt 'static' and
+  elligible: (e) =>
+    style = if e.currentStyle
+    then e.currentStyle
+    else getComputedStyle(e, null)
+#     style.position isnt 'static' and # static breaks scrolling sometimes
+    style[@overflow_css] is 'auto' or #makes sense to scroll
+    style[@overflow_css] is 'scroll' and
     e.parentElement #no parent == html -> use global scroll
 
   constructor: (@start) ->
     cur_elem = @start
     while cur_elem
-      if Math.abs(@compare cur_elem) > 18 and elligible cur_elem
+      if Math.abs(@compare cur_elem) > 18 and @elligible cur_elem
         console.log "#{@desc}.found:", cur_elem if DBG_SHOW_FOUND
         @elem = cur_elem
         return
@@ -168,12 +172,14 @@ class ScrollerX extends Scroller
   compare: (e) -> e.scrollWidth - e.clientWidth #0 if same
   scroll: (dist) => @elem.scrollLeft+=dist #auto manages bounds
   fallback: (dist) -> window.scrollBy(dist, 0)
+  overflow_css: 'overflow-x'
   desc: 'X'
 class ScrollerY extends Scroller
 #   compare: (e) -> e.scrollTopMax ##e.scrollHeight - e.clientHeight #0 if same
   compare: (e) -> e.scrollHeight - e.clientHeight #0 if same
   scroll: (dist) => @elem.scrollTop+=dist
   fallback: (dist) -> window.scrollBy(0, dist)
+  overflow_css: 'overflow-y'
   desc:'Y'
 
 # exists for a single drag
