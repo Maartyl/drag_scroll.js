@@ -80,13 +80,13 @@ class Buf
       d:0
       l:1
       p:pos
-      t: new Date
+      t:performance.now()
     ]
 
   # returns DIFF from last
   # pos of mouse (as obtained from event)
   add: (pos) =>
-    time = new Date
+    time = performance.now()
     last = @arr[@idx]
     diff = last.p - pos #inverted, otherwise scrolls ... upside down
     len = time - last.t
@@ -168,7 +168,7 @@ class Scroller
   scrollable:true
 
 class ScrollerX extends Scroller
-#   compare: (e) -> e.scrollLeftMax ##e.scrollWidth - e.clientWidth #0 if same
+  #   compare: (e) -> e.scrollLeftMax ##e.scrollWidth - e.clientWidth #0 if same
   compare: (e) -> e.scrollWidth - e.clientWidth #0 if same
   scroll: (dist) => @elem.scrollLeft+=dist #auto manages bounds
   fallback: (dist) -> window.scrollBy(dist, 0)
@@ -222,23 +222,39 @@ class Momentum
   LIMIT = 0.25 #px/ms
   # speed: px/ms; scroll: fn, scrolls by given pixels
   constructor: (@speed, @scroll) ->
-    @last_time = new Date
-    @intervalID = setInterval @run, 16 #16.6ms === 60FPS (and there will be some overhead here)
+    @last_time = performance.now()
+    @running = true
+    @leftover = 0
+    window.requestAnimationFrame @run
 
-  stop: => clearInterval @intervalID
+  stop: => @running = false
 
-  run: =>
-    time = new Date
+  run: (time)=>
+    if (!@running)
+      return
+
+    # time = performance.now()
     tdiff = time - @last_time #elapsed ms from last invocation
     @last_time = time
+
+    # tdiff should still be ms, just more accurate than date
 
     @speed = Math.pow(DRAG, tdiff) * @speed
 
     if Math.abs(@speed) < LIMIT
+      lo = Math.round(@leftover)
+      if (lo != 0)
+        @scroll lo
+
       do @stop
     else
       #this is slightly smaller, as it doesn't include every step, but... it's fine
-      @scroll @speed * tdiff
+      scroll_by = @speed * tdiff + @leftover
+      # @leftover = scroll_by % 1  # scrolled by integer pixels
+      # scroll_by = scroll_by // 1
+
+      @scroll scroll_by
+      window.requestAnimationFrame @run
 
 # exists after dragger ends
 class Overscroll

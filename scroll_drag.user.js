@@ -96,14 +96,14 @@
           d: 0,
           l: 1,
           p: pos,
-          t: new Date
+          t: performance.now()
         }
       ];
     }
 
     Buf.prototype.add = function(pos) {
       var diff, last, len, time;
-      time = new Date;
+      time = performance.now();
       last = this.arr[this.idx];
       diff = last.p - pos;
       len = time - last.t;
@@ -316,24 +316,34 @@
       this.scroll = scroll;
       this.run = bind(this.run, this);
       this.stop = bind(this.stop, this);
-      this.last_time = new Date;
-      this.intervalID = setInterval(this.run, 16);
+      this.last_time = performance.now();
+      this.running = true;
+      this.leftover = 0;
+      window.requestAnimationFrame(this.run);
     }
 
     Momentum.prototype.stop = function() {
-      return clearInterval(this.intervalID);
+      return this.running = false;
     };
 
-    Momentum.prototype.run = function() {
-      var tdiff, time;
-      time = new Date;
+    Momentum.prototype.run = function(time) {
+      var lo, scroll_by, tdiff;
+      if (!this.running) {
+        return;
+      }
       tdiff = time - this.last_time;
       this.last_time = time;
       this.speed = Math.pow(DRAG, tdiff) * this.speed;
       if (Math.abs(this.speed) < LIMIT) {
+        lo = Math.round(this.leftover);
+        if (lo !== 0) {
+          this.scroll(lo);
+        }
         return this.stop();
       } else {
-        return this.scroll(this.speed * tdiff);
+        scroll_by = this.speed * tdiff + this.leftover;
+        this.scroll(scroll_by);
+        return window.requestAnimationFrame(this.run);
       }
     };
 
