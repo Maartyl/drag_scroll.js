@@ -294,6 +294,8 @@ class Listener
     if ev.button isnt MB then return
     @serv = @serv.start ev
     document.addEventListener 'mousemove', @move
+    ev.preventDefault(); #windows needs that - otherwise does the annoying scrolling
+    ev.stopPropagation();
     false
   up: (ev) =>
     if ev.button isnt MB then return
